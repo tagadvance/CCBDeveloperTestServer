@@ -61,9 +61,9 @@ $app->get('/movies', function (Request $request, Response $response, array $args
         return $response->withJson($hateoas->exportWithCollection($movies));
     } catch (\PDOException $e) {
         // TODO: log exception
-        return $response->withJson([
-            'message' => 'An error has occurred. Please check the log for more information.'
-        ], $status = 500);
+        
+        $message = Hateoas::exportMessage('An error has occurred. Please check the log for more information.');
+        return $response->withJson($message, $status = 500);
     }
 });
 
@@ -83,9 +83,9 @@ $app->get('/movie/{id}', function (Request $request, Response $response, array $
         return $response->withJson($hateoas->exportWithItem($movie));
     } catch (\PDOException $e) {
         // TODO: log exception
-        return $response->withJson([
-            'message' => 'An error has occurred. Please check the log for more information.'
-        ], $status = 500);
+        
+        $message = Hateoas::exportMessage('An error has occurred. Please check the log for more information.');
+        return $response->withJson($message, $status = 500);
     }
 });
 
@@ -106,14 +106,10 @@ $app->get('/movie/{id}/actors', function (Request $request, Response $response, 
         return $response->withJson($hateoas->exportWithCollection($actors));
     } catch (\PDOException $e) {
         // TODO: log exception
-        return $response->withJson([
-            'message' => 'An error has occurred. Please check the log for more information.'
-        ], $status = 500);
+        
+        $message = Hateoas::exportMessage('An error has occurred. Please check the log for more information.');
+        return $response->withJson($message, $status = 500);
     }
-    
-    return $response->withJson([
-        'message' => 'Movie not found.'
-    ], $status = 404);
 });
 
 $app->run();
