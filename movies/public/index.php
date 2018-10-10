@@ -1,4 +1,5 @@
 <?php
+
 use \Psr\Http\Message\ServerRequestInterface as Request;
 use \Psr\Http\Message\ResponseInterface as Response;
 
@@ -11,7 +12,7 @@ $container['db'] = function($c) {
     $database = $user = $password = "sakila";
     $host = "mysql";
 
-    return new PDO("mysql:host={$host};dbname={$database};charset=utf8", $user, $password);
+    return new PDO("mysql:host={$host};dbname={$database};charset=utf8mb4", $user, $password);
 };
 
 $app->get('/movies', function (Request $request, Response $response, array $args) {
