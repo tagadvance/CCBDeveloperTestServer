@@ -1,8 +1,11 @@
 <?php
-use Psr\Http\Message\ServerRequestInterface as Request;
-use Psr\Http\Message\ResponseInterface as Response;
 
 require '../vendor/autoload.php';
+
+use Psr\Http\Message\ServerRequestInterface as Request;
+use Psr\Http\Message\ResponseInterface as Response;
+use persistence\MovieDao;
+use tools\Hateoas;
 
 $configuration = [
     'settings' => [
@@ -13,7 +16,7 @@ $configuration = [
 $container = new \Slim\Container($configuration);
 $app = new \Slim\App($container);
 
-$container['db'] = function ($c) {
+$container['pdo'] = function ($c) {
     $database = $user = $password = 'sakila';
     $host = 'mysql';
     
@@ -22,64 +25,95 @@ $container['db'] = function ($c) {
     ];
     return new PDO("mysql:host={$host};dbname={$database};charset=utf8mb4", $user, $password, $options);
 };
+$container['movieDao'] = function ($c) {
+    return new MovieDao($c['pdo']);
+};
 
-$app->get('/movies', function (Request $request, Response $response, array $args) use ($app) {
-    /**
-     *
-     * @var PDO $db
-     */
-    $db = $this->get('db');
-    
+$app->get('/', function (Request $request, Response $response, array $args) {
+    $hateoas = new Hateoas();
+    $hateoas->addLink('/', 'start')->addLink('/movies', 'movies');
+    $hateoas->addText('welcome', 'Welcome to Tag\s Developer Test Server.');
+    return $response->withJson($hateoas->export());
+});
+
+$app->get('/movies', function (Request $request, Response $response, array $args) {
     $params = $request->getQueryParams();
     $title = isset($params['title']) ? "%{$params['title']}%" : '%';
     $rating = $params['rating'] ?? '%';
     $category = isset($params['category']) ? "%{$params['category']}%" : '%';
     
-    $query = <<<SQL
-SELECT 
-    f.film_id,
-    title,
-    description,
-    release_year,
-    l.name AS language_name,
-    rental_duration,
-    rental_rate,
-    length,
-    replacement_cost,
-    rating,
-    special_features,
-    (SELECT 
-            GROUP_CONCAT(c.name)
-        FROM
-            film_category fc
-                INNER JOIN
-            category c ON fc.category_id = c.category_id
-        WHERE
-            f.film_id = fc.film_id) AS category_names,
-    f.last_update
-FROM
-    film f
-        INNER JOIN
-    language l ON f.language_id = l.language_id
-WHERE
-    title LIKE :title
-        AND rating LIKE :rating
-HAVING category_names LIKE :category;
-SQL;
+    $movieDao = $this->get('movieDao');
+    
+    $hateoas = new Hateoas();
+    $hateoas->addLink('/', 'start')->addLink('/movies', 'movies');
+    $hateoas->addNamedCollection('ratings', $movieDao->getFilmRatings());
+    $hateoas->addNamedCollection('categories', $movieDao->getCategories());
+    $hateoas->addText('hint', 'Movies may be filtered by title, rating, or category, e.g. /movies?title=dino&rating=PG&category=Classics');
+    
     try {
-        $statement = $db->prepare($query);
-        $statement->bindValue('title', $title);
-        $statement->bindValue('rating', $rating);
-        $statement->bindValue('category', $category);
-        if ($statement->execute()) {
-            $movies = $statement->fetchAll(PDO::FETCH_OBJ);
-            return $response->withJson($movies);
-        }
+        $movies = $movieDao->retrieveFilms($title, $rating, $category);
+        array_walk($movies, function (&$value, $key) {
+            $hateoas = new Hateoas();
+            $hateoas->addLink("/movie/$value->film_id", 'details');
+            $hateoas->addLink("/movie/$value->film_id/actors", 'actors');
+            $value = $hateoas->exportWithItem($value);
+        });
+        return $response->withJson($hateoas->exportWithCollection($movies));
     } catch (\PDOException $e) {
+        // TODO: log exception
         return $response->withJson([
-            'message' => 'An error has occurred.'
+            'message' => 'An error has occurred. Please check the log for more information.'
         ], $status = 500);
     }
+});
+
+$app->get('/movie/{id}', function (Request $request, Response $response, array $args) {
+    $movieDao = $this->get('movieDao');
+    
+    $hateoas = new Hateoas();
+    $hateoas->addLink('/', 'start')->addLink('/movies', 'movies')->addLink("/movie/$args[id]", 'self');
+    
+    try {
+        $movie = $movieDao->retrieveFilmByFilmId($args['id']);
+        if (empty($movie)) {
+            return $response->withJson([
+                'message' => 'Movie not found.'
+            ], $status = 404);
+        }
+        return $response->withJson($hateoas->exportWithItem($movie));
+    } catch (\PDOException $e) {
+        // TODO: log exception
+        return $response->withJson([
+            'message' => 'An error has occurred. Please check the log for more information.'
+        ], $status = 500);
+    }
+});
+
+$app->get('/movie/{id}/actors', function (Request $request, Response $response, array $args) {
+    $movieDao = $this->get('movieDao');
+    
+    $hateoas = new Hateoas();
+    $hateoas->addLink('/', 'start')->addLink('/movies', 'movies');
+    $hateoas->addLink("/movie/$args[id]", 'parent');
+    $hateoas->addLink("/movie/$args[id]/actors", 'self');
+    
+    try {
+        $actors = $movieDao->retrieveActorsByFilmId($args['id']);
+        array_walk($actors, function (&$value, $key) {
+            $hateoas = new Hateoas();
+            $value = $hateoas->exportWithItem($value);
+        });
+        return $response->withJson($hateoas->exportWithCollection($actors));
+    } catch (\PDOException $e) {
+        // TODO: log exception
+        return $response->withJson([
+            'message' => 'An error has occurred. Please check the log for more information.'
+        ], $status = 500);
+    }
+    
+    return $response->withJson([
+        'message' => 'Movie not found.'
+    ], $status = 404);
 });
 
 $app->run();
