@@ -17,13 +17,14 @@ $container = new \Slim\Container($configuration);
 $app = new \Slim\App($container);
 
 $container['pdo'] = function ($c) {
-    $database = $user = $password = 'sakila';
     $host = 'mysql';
+    $database = $user = $password = 'sakila';
     
+    $dsn = "mysql:host={$host};dbname={$database};charset=utf8mb4";
     $options = [
         PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION
     ];
-    return new PDO("mysql:host={$host};dbname={$database};charset=utf8mb4", $user, $password, $options);
+    return new PDO($dsn, $user, $password, $options);
 };
 $container['movieDao'] = function ($c) {
     return new MovieDao($c['pdo']);
