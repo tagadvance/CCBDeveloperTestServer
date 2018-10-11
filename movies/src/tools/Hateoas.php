@@ -5,6 +5,7 @@ namespace tools;
  * Hypermedia as the Engine of Application State.
  *
  * This class allows our little API to be explorable by providing consistent structure for returned data.
+ * We could easily extend it to support pagination.
  */
 class Hateoas
 {
@@ -97,12 +98,11 @@ class Hateoas
         $this->data['item'] = $item;
         return $this->data;
     }
-    
+
     static function exportMessage($message): array
     {
         return [
             'message' => 'An error has occurred. Please check the log for more information.'
         ];
     }
-    
 }
