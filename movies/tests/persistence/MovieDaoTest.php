@@ -31,7 +31,7 @@ final class MovieDaoTest extends TestCase
     {
         new MovieDao(self::$pdo);
         
-        // Avoid "This test did not perform any assertions"
+        // Suppress "This test did not perform any assertions"
         $this->assertTrue(true);
     }
 
