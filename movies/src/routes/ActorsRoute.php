@@ -4,7 +4,7 @@ namespace routes;
 use routes\AbstractRoute;
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
-use tools\Hateoas;
+use rest\Hateoas;
 
 class ActorsRoute extends AbstractRoute
 {

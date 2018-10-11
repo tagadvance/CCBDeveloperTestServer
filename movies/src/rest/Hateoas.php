@@ -1,5 +1,5 @@
 <?php
-namespace tools;
+namespace rest;
 
 /**
  * Hypermedia as the Engine of Application State.

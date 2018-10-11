@@ -5,7 +5,7 @@ require '../vendor/autoload.php';
 use Psr\Http\Message\ServerRequestInterface as Request;
 use Psr\Http\Message\ResponseInterface as Response;
 use persistence\MovieDao;
-use tools\Hateoas;
+use rest\Hateoas;
 
 $configuration = [
     'settings' => [
