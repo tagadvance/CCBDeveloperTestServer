@@ -36,7 +36,18 @@ class MovieDao {
         return [];
     }
     
-    function retrieveFilms($title, $rating, $category): array {
+    /**
+     * 
+     * @param string $title A partial or complete movie title.
+     * @param string $rating One of: "PG", "G", "NC-17", "PG-13", or "R".
+     * @param string $category One of: "Action", "Animation", "Children", "Classics", "Comedy", "Documentary", "Drama", "Family", "Foreign", "Games", "Horror", "Music", "New", "Sci-Fi", "Sports", "Travel".
+     * @return array An array of films.
+     */
+    function retrieveFilms(string $title = null, string $rating = null, string $category = null): array {
+        $title = isset($title) ? "%{$title}%" : '%';
+        $rating = $rating ?? '%';
+        $category = $category ?? '%';
+        
         $query = <<<SQL
 SELECT
     f.film_id,

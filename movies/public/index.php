@@ -37,11 +37,6 @@ $app->get('/', function (Request $request, Response $response, array $args) {
 });
 
 $app->get('/movies', function (Request $request, Response $response, array $args) {
-    $params = $request->getQueryParams();
-    $title = isset($params['title']) ? "%{$params['title']}%" : '%';
-    $rating = $params['rating'] ?? '%';
-    $category = isset($params['category']) ? "%{$params['category']}%" : '%';
-    
     $movieDao = $this->get('movieDao');
     
     $hateoas = new Hateoas();
@@ -50,6 +45,10 @@ $app->get('/movies', function (Request $request, Response $response, array $args
     $hateoas->addNamedCollection('categories', $movieDao->getCategories());
     $hateoas->addText('hint', 'Movies may be filtered by title, rating, or category, e.g. /movies?title=dino&rating=PG&category=Classics');
     
+    $params = $request->getQueryParams();
+    $title = $params['title'] ?? null;
+    $rating = $params['rating'] ?? null;
+    $category = $params['category'] ?? null;
     try {
         $movies = $movieDao->retrieveFilms($title, $rating, $category);
         array_walk($movies, function (&$value, $key) {
