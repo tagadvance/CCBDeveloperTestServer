@@ -102,7 +102,7 @@ class Hateoas
     static function exportMessage($message): array
     {
         return [
-            'message' => 'An error has occurred. Please check the log for more information.'
+            'message' => $message
         ];
     }
 }
