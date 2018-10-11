@@ -28,22 +28,20 @@ $container['pdo'] = function ($c) {
 $container['movieDao'] = function ($c) {
     return new MovieDao($c['pdo']);
 };
-
-$app->get('/', function (Request $request, Response $response, array $args) {
+$container['baseHateoas'] = $container->factory(function ($c) {
     $hateoas = new Hateoas();
     $hateoas->addLink('/', 'start')->addLink('/movies', 'movies');
+    return $hateoas;
+});
+
+$app->get('/', function (Request $request, Response $response, array $args) {
+    $hateoas = $this->get('baseHateoas');
     $hateoas->addText('welcome', 'Welcome to Tag\s Developer Test Server.');
     return $response->withJson($hateoas->export());
 });
 
 $app->get('/movies', function (Request $request, Response $response, array $args) {
     $movieDao = $this->get('movieDao');
-    
-    $hateoas = new Hateoas();
-    $hateoas->addLink('/', 'start')->addLink('/movies', 'movies');
-    $hateoas->addNamedCollection('ratings', $movieDao->getFilmRatings());
-    $hateoas->addNamedCollection('categories', $movieDao->getCategories());
-    $hateoas->addText('hint', 'Movies may be filtered by title, rating, or category, e.g. /movies?title=dino&rating=PG&category=Classics');
     
     $params = $request->getQueryParams();
     $title = $params['title'] ?? null;
@@ -57,7 +55,13 @@ $app->get('/movies', function (Request $request, Response $response, array $args
             $hateoas->addLink("/movie/$value->film_id/actors", 'actors');
             $value = $hateoas->exportWithItem($value);
         });
-        return $response->withJson($hateoas->exportWithCollection($movies));
+        
+        $hateoas = $this->get('baseHateoas');
+        $hateoas->addNamedCollection('ratings', $movieDao->getFilmRatings());
+        $hateoas->addNamedCollection('categories', $movieDao->getCategories());
+        $hateoas->addText('hint', 'Movies may be filtered by title, rating, or category, e.g. /movies?title=dino&rating=PG&category=Classics');
+        $data = $hateoas->exportWithCollection($movies);
+        return $response->withJson($data);
     } catch (\PDOException $e) {
         // TODO: log exception
         
@@ -68,10 +72,6 @@ $app->get('/movies', function (Request $request, Response $response, array $args
 
 $app->get('/movie/{id}', function (Request $request, Response $response, array $args) {
     $movieDao = $this->get('movieDao');
-    
-    $hateoas = new Hateoas();
-    $hateoas->addLink('/', 'start')->addLink('/movies', 'movies')->addLink("/movie/$args[id]", 'self');
-    
     try {
         $movie = $movieDao->retrieveFilmByFilmId($args['id']);
         if (empty($movie)) {
@@ -79,7 +79,11 @@ $app->get('/movie/{id}', function (Request $request, Response $response, array $
                 'message' => 'Movie not found.'
             ], $status = 404);
         }
-        return $response->withJson($hateoas->exportWithItem($movie));
+        
+        $hateoas = $this->get('baseHateoas');
+        $hateoas->addLink("/movie/$args[id]", 'self');
+        $data = $hateoas->exportWithItem($movie);
+        return $response->withJson($data);
     } catch (\PDOException $e) {
         // TODO: log exception
         
@@ -91,18 +95,18 @@ $app->get('/movie/{id}', function (Request $request, Response $response, array $
 $app->get('/movie/{id}/actors', function (Request $request, Response $response, array $args) {
     $movieDao = $this->get('movieDao');
     
-    $hateoas = new Hateoas();
-    $hateoas->addLink('/', 'start')->addLink('/movies', 'movies');
-    $hateoas->addLink("/movie/$args[id]", 'parent');
-    $hateoas->addLink("/movie/$args[id]/actors", 'self');
-    
     try {
         $actors = $movieDao->retrieveActorsByFilmId($args['id']);
         array_walk($actors, function (&$value, $key) {
             $hateoas = new Hateoas();
             $value = $hateoas->exportWithItem($value);
         });
-        return $response->withJson($hateoas->exportWithCollection($actors));
+        
+        $hateoas = $this->get('baseHateoas');
+        $hateoas->addLink("/movie/$args[id]", 'parent');
+        $hateoas->addLink("/movie/$args[id]/actors", 'self');
+        $data = $hateoas->exportWithCollection($actors);
+        return $response->withJson($data);
     } catch (\PDOException $e) {
         // TODO: log exception
         
