@@ -46,7 +46,7 @@ class MovieDao {
     function retrieveFilms(string $title = null, string $rating = null, string $category = null): array {
         $title = isset($title) ? "%{$title}%" : '%';
         $rating = $rating ?? '%';
-        $category = $category ?? '%';
+        $category = isset($category) ? "%{$category}%" : '%';
         
         $query = <<<SQL
 SELECT
@@ -66,8 +66,8 @@ SELECT
 FROM
     film f
 WHERE
-    title LIKE :title
-        AND rating LIKE :rating
+    title LIKE :title AND rating LIKE :rating
+GROUP BY f.film_id
 HAVING category_names LIKE :category;
 SQL;
         $statement = $this->pdo->prepare($query);
@@ -81,7 +81,12 @@ SQL;
         return [];
     }
     
-    function retrieveFilmByFilmId(int $film_id): object {
+    /**
+     * 
+     * @param int $film_id
+     * @return object|NULL Film object or null if the film could not be found.
+     */
+    function retrieveFilmByFilmId(int $film_id): ?object {
         $query = <<<SQL
 SELECT
     f.film_id,
@@ -114,13 +119,16 @@ SQL;
         $statement->bindValue('film_id', $film_id);
         if ($statement->execute()) {
             try {
-                return $statement->fetch(\PDO::FETCH_OBJ);
+                $film = $statement->fetch(\PDO::FETCH_OBJ);
+                if ($film) {
+                    return $film;
+                }
             } finally {
                 $statement->closeCursor();
             }
         }
         
-        return new \stdClass();
+        return null;
     }
     
     function retrieveActorsByFilmId(int $film_id): array {
