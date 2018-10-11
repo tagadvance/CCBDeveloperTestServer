@@ -5,7 +5,7 @@ namespace rest;
  * Hypermedia as the Engine of Application State.
  *
  * This class allows our little API to be explorable by providing consistent structure for returned data.
- * We could easily extend it to support pagination.
+ * We could easily expand it to support pagination.
  */
 class Hateoas
 {
